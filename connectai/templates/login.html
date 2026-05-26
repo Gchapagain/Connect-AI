@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Login — ConnectAI | TCU{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+
+  <!-- Hero panel -->
+  <div class="auth-hero">
+    <p class="hero-eyebrow">Texas Christian University</p>
+    <h1 class="hero-headline">Stop scrolling.<br>Start connecting.</h1>
+    <p class="hero-sub">ConnectAI pairs you with the right peer — someone who's been where you are and knows how to help. Real students, real support.</p>
+    <div class="hero-pills">
+      <span class="hero-pill">AI-powered matching</span>
+      <span class="hero-pill">Peer-to-peer support</span>
+      <span class="hero-pill">TCU students only</span>
+    </div>
+  </div>
+
+  <!-- Form panel -->
+  <div class="auth-form-panel">
+    <h2 class="auth-title">Welcome back</h2>
+    <p class="auth-sub">Sign in to your ConnectAI account</p>
+
+    <form method="POST">
+      <div class="form-group">
+        <label for="email">TCU Email</label>
+        <input type="email" id="email" name="email" placeholder="yourname@tcu.edu" required autocomplete="email" />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:8px;">
+        Sign In
+      </button>
+    </form>
+
+    <p class="auth-footer-link">
+      Don't have an account? <a href="{{ url_for('signup') }}" style="font-weight:700;">Sign up free</a>
+    </p>
+  </div>
+
+</div>
+{% endblock %}

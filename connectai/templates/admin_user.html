@@ -1,0 +1,139 @@
+{% extends "admin_base.html" %}
+{% block title %}{{ user.name }} — Admin | ConnectAI{% endblock %}
+{% block page_title %}User Profile: {{ user.name }}{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('admin_dashboard') }}#users"
+     style="font-size:.85rem;color:#6b7280;text-decoration:none;">← Back to Users</a>
+</div>
+
+<div class="admin-user-grid">
+
+  <!-- ── Profile card ── -->
+  <div>
+    <div class="admin-section" style="padding:0;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#4D1979,#7c3aed);padding:28px;text-align:center;">
+        {% if user.profile_photo %}
+          <img src="{{ url_for('static', filename='uploads/' ~ user.profile_photo) }}"
+               alt="{{ user.name }}"
+               style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.4);margin:0 auto 12px;" />
+        {% else %}
+          <div style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:2.2rem;margin:0 auto 12px;">🎓</div>
+        {% endif %}
+        <p style="font-size:1.2rem;font-weight:800;color:#fff;">{{ user.name }}</p>
+        <p style="font-size:.82rem;color:rgba(255,255,255,.7);">{{ user.email }}</p>
+      </div>
+
+      <div style="padding:20px;">
+        <table style="width:100%;font-size:.85rem;border-collapse:collapse;">
+          {% for label, val in [
+              ('ID',         user.id),
+              ('Graduation', user.graduation or '—'),
+              ('Gender',     user.gender or '—'),
+              ('Phone',      user.phone or '—'),
+              ('DOB',        user.dob or '—'),
+              ('Joined',     (user.created_at or '')[:10]),
+          ] %}
+          <tr style="border-bottom:1px solid #f0eff5;">
+            <td style="padding:8px 0;font-weight:600;color:#4D1979;width:40%;">{{ label }}</td>
+            <td style="padding:8px 0;color:#6b7280;">{{ val }}</td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td style="padding:8px 0;font-weight:600;color:#4D1979;">Status</td>
+            <td style="padding:8px 0;">
+              {% if user.is_banned %}
+                <span class="admin-badge admin-badge-danger">Banned</span>
+              {% else %}
+                <span class="admin-badge admin-badge-ok">Active</span>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Actions -->
+      <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px;">
+        {% if user.is_banned %}
+        <form method="POST" action="{{ url_for('admin_unban_user', user_id=user.id) }}">
+          <button type="submit" class="admin-btn admin-btn-unban" style="width:100%;justify-content:center;padding:10px;">
+            ✅ Unban User
+          </button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('admin_ban_user', user_id=user.id) }}"
+              onsubmit="return confirm('Ban {{ user.name }}?')">
+          <button type="submit" class="admin-btn admin-btn-ban" style="width:100%;justify-content:center;padding:10px;">
+            🚫 Ban User
+          </button>
+        </form>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('admin_reset_password', user_id=user.id) }}"
+              onsubmit="return confirm('Reset password for {{ user.name }}?')">
+          <button type="submit" class="admin-btn admin-btn-reset" style="width:100%;justify-content:center;padding:10px;">
+            🔑 Reset Password
+          </button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin_delete_user', user_id=user.id) }}"
+              onsubmit="return confirm('PERMANENTLY delete {{ user.name }} and all their data? This cannot be undone.')">
+          <button type="submit" class="admin-btn admin-btn-danger" style="width:100%;justify-content:center;padding:10px;">
+            🗑️ Delete Account
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Survey answers ── -->
+  <div>
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <h2>📝 Survey Answers
+          {% if answers %}
+            <span style="font-weight:400;color:#6b7280;font-size:.85rem;">({{ answers|length }} / 20)</span>
+          {% endif %}
+        </h2>
+      </div>
+
+      {% if answers %}
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Question</th>
+              <th>Score</th>
+              <th>Label</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in answers %}
+            <tr>
+              <td style="color:#6b7280;font-size:.8rem;">{{ loop.index }}</td>
+              <td>{{ row.question }}</td>
+              <td style="text-align:center;font-weight:700;color:#4D1979;">{{ row.answer }}</td>
+              <td>
+                {% set score_map = {1:'Strongly Agree',2:'Agree',3:'Slightly Agree',4:'Neutral',5:'Slightly Disagree',6:'Disagree',7:'Strongly Disagree'} %}
+                <span class="admin-badge admin-badge-purple">
+                  {{ score_map.get(row.answer|int, row.answer) }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="padding:24px;text-align:center;color:#6b7280;">
+        This user has not completed the survey yet.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

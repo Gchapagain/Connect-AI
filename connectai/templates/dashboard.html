@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ConnectAI | TCU{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 style="font-size:1.9rem;font-weight:900;color:var(--primary);">
+      Hey, {{ user.first_name or user.name.split()[0] }} 👋
+    </h1>
+    <p style="color:var(--muted);">Here's what's happening with your connections.</p>
+  </div>
+  <div style="display:flex;gap:10px;">
+    {% if not survey_done %}
+    <a href="{{ url_for('survey') }}" class="btn btn-outline">Complete Survey</a>
+    {% endif %}
+    {% if not active_match %}
+    <a href="{{ url_for('stress') }}" class="btn btn-primary">Find a Buddy ✨</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="dashboard-grid">
+
+  <!-- ── Left column: profile ── -->
+  <div>
+    <div class="card profile-card">
+      {% if user.profile_photo %}
+        <img src="{{ url_for('static', filename='uploads/' ~ user.profile_photo) }}"
+             alt="Profile" class="profile-avatar" />
+      {% else %}
+        <div class="profile-avatar-placeholder">🎓</div>
+      {% endif %}
+      <p class="profile-name">{{ user.name }}</p>
+      <p class="profile-email">{{ user.email }}</p>
+      {% if user.graduation %}
+        <p class="profile-grad">Class of {{ user.graduation }}</p>
+      {% endif %}
+
+      {% if survey_done and answers %}
+      <div class="trait-grid" style="margin-top:20px;">
+        {% set labels = {1:'Strongly Agree',2:'Agree',3:'Somewhat Agree',4:'Neutral',5:'Somewhat Disagree',6:'Disagree',7:'Strongly Disagree'} %}
+        {% for row in answers[:4] %}
+        <div class="trait-chip">
+          {{ row.question[:22] }}{% if row.question|length > 22 %}…{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% elif not survey_done %}
+      <a href="{{ url_for('survey') }}" class="btn btn-ghost btn-full" style="margin-top:16px;">
+        Complete Survey →
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Quick links -->
+    <div class="card card-sm" style="margin-top:16px;">
+      <p class="section-title">Quick Links</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <a href="{{ url_for('messages_inbox') }}" class="btn btn-ghost btn-full" style="justify-content:flex-start;">
+          💬 Messages
+          {% if unread_count > 0 %}
+            <span class="badge badge-danger" style="margin-left:auto;">{{ unread_count }}</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('stress') }}" class="btn btn-ghost btn-full" style="justify-content:flex-start;">
+          ✨ Find a Buddy
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Right column: matches ── -->
+  <div>
+
+    <!-- Pending helper requests -->
+    {% if helper_pending %}
+    <div style="margin-bottom:24px;">
+      <p class="section-title">🔔 Someone needs your help</p>
+      {% for m in helper_pending %}
+      {% set seeker_name = m.seeker_first or m.seeker_name.split()[0] %}
+      <div class="match-status-card pending" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <p style="font-weight:700;color:var(--primary);">{{ seeker_name }} is reaching out</p>
+          <p class="text-sm text-muted" style="margin-top:2px;">{{ m.stress_description[:80] }}{% if m.stress_description|length > 80 %}…{% endif %}</p>
+        </div>
+        <a href="{{ url_for('respond_match', match_id=m.id) }}" class="btn btn-primary" style="flex-shrink:0;">
+          View &amp; Respond
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- My matches (as seeker) -->
+    <p class="section-title">My Matches</p>
+
+    {% if seeker_matches %}
+    {% for m in seeker_matches %}
+    {% set helper_name = m.helper_first or (m.helper_name.split()[0] if m.helper_name else 'Unknown') %}
+    <div class="match-status-card {{ m.status }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+            <p style="font-weight:700;color:var(--primary);">{{ helper_name }}</p>
+            {% if m.status == 'pending' %}
+              <span class="badge badge-warning">Pending</span>
+            {% elif m.status == 'accepted' %}
+              <span class="badge badge-success">Accepted</span>
+            {% elif m.status == 'rejected' %}
+              <span class="badge badge-danger">Declined</span>
+            {% else %}
+              <span class="badge badge-muted">{{ m.status }}</span>
+            {% endif %}
+          </div>
+          <p class="text-sm text-muted">{{ m.stress_description[:90] }}{% if m.stress_description|length > 90 %}…{% endif %}</p>
+        </div>
+        {% if m.status == 'accepted' %}
+        <a href="{{ url_for('message_thread', match_id=m.id) }}" class="btn btn-success" style="flex-shrink:0;">
+          💬 Chat
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="card empty-state">
+      <div class="empty-state-icon">🤝</div>
+      <p style="font-weight:600;color:var(--primary);margin-bottom:4px;">No matches yet</p>
+      <p>Tell us what you need and we'll find your person.</p>
+      <a href="{{ url_for('stress') }}" class="btn btn-primary" style="margin-top:14px;">Find a Buddy</a>
+    </div>
+    {% endif %}
+
+    <!-- Active conversations -->
+    {% if inbox_threads %}
+    <p class="section-title" style="margin-top:28px;">Active Conversations</p>
+    {% for t in inbox_threads %}
+    {% set other_name = (t.helper_first if t.seeker_id == session.user_id else t.seeker_first) or 'Peer' %}
+    <a href="{{ url_for('message_thread', match_id=t.id) }}" style="text-decoration:none;">
+      <div class="match-status-card accepted" style="margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <p style="font-weight:700;color:var(--primary);">{{ other_name }}</p>
+          <span class="badge badge-success">Active</span>
+        </div>
+        <p class="text-sm text-muted" style="margin-top:4px;">Tap to open conversation →</p>
+      </div>
+    </a>
+    {% endfor %}
+    {% endif %}
+
+  </div>
+
+</div>
+{% endblock %}

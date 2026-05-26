@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Personality Survey — ConnectAI | TCU{% endblock %}
+
+{% block content %}
+<div class="survey-wrapper">
+
+  <div style="text-align:center;margin-bottom:24px;">
+    <h1 style="font-size:1.9rem;font-weight:900;color:var(--primary);margin-bottom:6px;">Tell us about yourself</h1>
+    <p style="color:var(--muted);font-size:.95rem;">Answer honestly — better answers mean better matches. Question <span id="q-current">1</span> of {{ questions|length }}</p>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="survey-progress-bar">
+    <div class="survey-progress-fill" id="progress-fill" style="width: calc(100% / {{ questions|length }})"></div>
+  </div>
+
+  <div class="card">
+    <form method="POST" id="survey-form">
+
+      {% for q in questions %}
+      <div class="survey-step {% if loop.first %}active{% endif %}" id="step-{{ loop.index }}">
+
+        <p class="survey-q-label">{{ loop.index }}. {{ q }}</p>
+
+        <div class="survey-scale-labels">
+          <span>Strongly Agree</span>
+          <span>Strongly Disagree</span>
+        </div>
+
+        {% set q_num = loop.index %}
+        <div class="survey-circles">
+          {% for val in [1,2,3,4,5,6,7] %}
+          <button type="button"
+                  class="survey-circle-btn {% if prev and prev.get('q'~q_num)|string == val|string %}selected{% endif %}"
+                  data-q="{{ q_num }}" data-val="{{ val }}"
+                  onclick="selectCircle({{ q_num }}, {{ val }})"></button>
+          {% endfor %}
+        </div>
+
+        <!-- Hidden input carries the actual value -->
+        <input type="hidden" name="q{{ q_num }}" id="val-{{ q_num }}"
+               value="{{ prev.get('q'~q_num, '') if prev else '' }}" />
+
+        <div class="survey-nav">
+          {% if not loop.first %}
+          <button type="button" class="btn btn-ghost" onclick="goStep({{ loop.index - 1 }})">← Back</button>
+          {% else %}
+          <span></span>
+          {% endif %}
+
+          <span class="survey-counter">{{ loop.index }} / {{ questions|length }}</span>
+
+          {% if not loop.last %}
+          <button type="button" class="btn btn-primary" onclick="nextStep({{ loop.index }})">Next →</button>
+          {% else %}
+          <button type="submit" class="btn btn-success">Submit Survey ✓</button>
+          {% endif %}
+        </div>
+
+      </div>
+      {% endfor %}
+
+    </form>
+  </div>
+
+</div>
+
+<script>
+  const totalQ = {{ questions|length }};
+
+  function selectCircle(qNum, val) {
+    // Deselect all circles for this question
+    document.querySelectorAll(`.survey-circle-btn[data-q="${qNum}"]`).forEach(b => b.classList.remove('selected'));
+    // Select clicked circle
+    document.querySelector(`.survey-circle-btn[data-q="${qNum}"][data-val="${val}"]`).classList.add('selected');
+    // Set hidden input
+    document.getElementById(`val-${qNum}`).value = val;
+  }
+
+  function goStep(n) {
+    document.querySelectorAll('.survey-step').forEach(s => s.classList.remove('active'));
+    document.getElementById(`step-${n}`).classList.add('active');
+    document.getElementById('q-current').textContent = n;
+    // Update progress
+    document.getElementById('progress-fill').style.width = `${(n / totalQ) * 100}%`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function nextStep(currentQ) {
+    const val = document.getElementById(`val-${currentQ}`).value;
+    if (!val) {
+      alert('Please select an answer before continuing.');
+      return;
+    }
+    goStep(currentQ + 1);
+  }
+
+  // Init progress fill
+  document.getElementById('progress-fill').style.width = `${(1 / totalQ) * 100}%`;
+</script>
+{% endblock %}

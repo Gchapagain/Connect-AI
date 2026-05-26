@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Someone Needs Your Help — ConnectAI | TCU{% endblock %}
+
+{% block content %}
+<div class="prematch-wrapper">
+
+  <div style="text-align:center;margin-bottom:28px;">
+    <h1 style="font-size:1.9rem;font-weight:900;color:var(--primary);margin-bottom:6px;">
+      Someone needs you 🤝
+    </h1>
+    <p style="color:var(--muted);">Take a quick look and let us know if you can help.</p>
+  </div>
+
+  <!-- Seeker info card -->
+  <div class="prematch-seeker-card">
+    {% if seeker.profile_photo %}
+      <img src="{{ url_for('static', filename='uploads/' ~ seeker.profile_photo) }}"
+           alt="{{ seeker.first_name }}" class="prematch-avatar" />
+    {% else %}
+      <div class="prematch-avatar-ph">🎓</div>
+    {% endif %}
+    <div>
+      <p class="prematch-seeker-name">{{ seeker.first_name or seeker.name.split()[0] }}</p>
+      <p class="prematch-seeker-meta">{{ seeker.email }} &bull; Class of {{ seeker.graduation }}</p>
+    </div>
+  </div>
+
+  <!-- What they shared -->
+  <div class="prematch-stress-box">
+    <p style="font-size:.76rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">What they're going through</p>
+    <p>{{ match.stress_description or "No details provided." }}</p>
+    {% if match.help_offered %}
+    <p style="margin-top:10px;font-size:.8rem;color:var(--muted);">
+      <strong>What they offer in return:</strong> {{ match.help_offered }}
+    </p>
+    {% endif %}
+  </div>
+
+  <!-- Pre-match questions -->
+  <div class="card">
+    <form method="POST">
+
+      <p style="font-weight:700;font-size:1rem;color:var(--primary);margin-bottom:20px;">
+        Before you commit, answer a few quick questions:
+      </p>
+
+      <!-- Q1: Topic comfort -->
+      <div class="form-group">
+        <label>Are you comfortable with this topic / situation?</label>
+        <div class="radio-group">
+          <div class="radio-pill">
+            <input type="radio" name="topic_ok" id="topic_yes" value="yes" required />
+            <label for="topic_yes">Yes, I got this</label>
+          </div>
+          <div class="radio-pill">
+            <input type="radio" name="topic_ok" id="topic_maybe" value="maybe" />
+            <label for="topic_maybe">Somewhat</label>
+          </div>
+          <div class="radio-pill">
+            <input type="radio" name="topic_ok" id="topic_no" value="no" />
+            <label for="topic_no">Not really</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q2: Availability -->
+      <div class="form-group">
+        <label>Are you available to connect this week?</label>
+        <div class="radio-group">
+          <div class="radio-pill">
+            <input type="radio" name="available" id="avail_yes" value="yes" required />
+            <label for="avail_yes">Yes</label>
+          </div>
+          <div class="radio-pill">
+            <input type="radio" name="available" id="avail_maybe" value="maybe" />
+            <label for="avail_maybe">Maybe</label>
+          </div>
+          <div class="radio-pill">
+            <input type="radio" name="available" id="avail_no" value="no" />
+            <label for="avail_no">No</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q3: In person vs virtual -->
+      <div class="form-group">
+        <label>How would you prefer to connect?</label>
+        <div class="radio-group">
+          <div class="radio-pill">
+            <input type="radio" name="in_person" id="ip_yes" value="in_person" required />
+            <label for="ip_yes">In person</label>
+          </div>
+          <div class="radio-pill">
+            <input type="radio" name="in_person" id="ip_virtual" value="virtual" />
+            <label for="ip_virtual">Virtual</label>
+          </div>
+          <div class="radio-pill">
+            <input type="radio" name="in_person" id="ip_either" value="either" />
+            <label for="ip_either">Either works</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q4: Confidence (1–5 circles) -->
+      <div class="form-group">
+        <label>How confident are you that you can genuinely help? (1 = not sure · 5 = very confident)</label>
+        <div class="confidence-row">
+          {% for n in [1,2,3,4,5] %}
+          <button type="button" class="confidence-btn" data-v="{{ n }}"
+                  onclick="selectConf({{ n }})">{{ n }}</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="confidence" id="conf-val" value="" />
+      </div>
+
+      <!-- Decision buttons -->
+      <div class="decision-row">
+        <button type="submit" name="decision" value="reject"
+                class="btn btn-outline btn-full"
+                onclick="return confirm('Are you sure you want to decline this match?')">
+          Decline
+        </button>
+        <button type="submit" name="decision" value="accept"
+                class="btn btn-success btn-full" id="accept-btn">
+          Accept &amp; Connect 🤝
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+
+<script>
+  function selectConf(n) {
+    document.querySelectorAll('.confidence-btn').forEach(b => {
+      b.classList.toggle('selected', parseInt(b.dataset.v) === n);
+    });
+    document.getElementById('conf-val').value = n;
+  }
+
+  // Require confidence before accept
+  document.getElementById('accept-btn').addEventListener('click', function(e) {
+    if (!document.getElementById('conf-val').value) {
+      e.preventDefault();
+      alert('Please rate your confidence (1–5) before accepting.');
+    }
+  });
+</script>
+{% endblock %}

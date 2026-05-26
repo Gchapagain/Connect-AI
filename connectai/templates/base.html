@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}ConnectAI | TCU{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="site-header">
+    <div class="header-inner">
+
+      <a href="{{ url_for('dashboard') if session.get('user_id') else url_for('login') }}" class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ConnectAI Logo" class="logo-img" />
+        <span class="logo-text">ConnectAI <span class="logo-pipe">|</span> TCU</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="header-nav">
+        {% if session.get('user_id') %}
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('stress') }}">Find a Buddy</a>
+          <a href="{{ url_for('messages_inbox') }}" class="nav-msg-link">
+            Messages
+            {% if unread_count > 0 %}<span class="nav-badge"></span>{% endif %}
+          </a>
+
+          <!-- Notification Bell -->
+          <div class="notif-wrapper">
+            <button class="notif-bell-btn" id="notif-bell" aria-label="Notifications">
+              🔔
+              {% if unread_notif > 0 %}
+                <span class="notif-count-badge">{{ unread_notif }}</span>
+              {% endif %}
+            </button>
+            <div class="notif-dropdown" id="notif-dropdown">
+              <div class="notif-dropdown-header">
+                <span>Notifications</span>
+                <button onclick="markAllRead()">Mark all read</button>
+              </div>
+              {% if recent_notifs %}
+                {% for n in recent_notifs %}
+                  <div class="notif-item {% if not n.is_read %}unread{% endif %}"
+                       onclick="handleNotifClick({{ n.id }}, {{ n.match_id or 'null' }})">
+                    <div class="notif-item-dot {% if n.is_read %}read{% endif %}"></div>
+                    <div>
+                      <div class="notif-item-text">{{ n.message }}</div>
+                      <div class="notif-item-time">
+                        {{ n.created_at[:16].replace('T',' ') if n.created_at else '' }}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="notif-empty">No notifications yet 🔕</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <a href="{{ url_for('logout') }}" class="btn-nav-logout">Logout</a>
+        {% else %}
+          <a href="{{ url_for('login') }}">Login</a>
+          <a href="{{ url_for('signup') }}" class="btn-nav-signup">Sign Up</a>
+        {% endif %}
+      </nav>
+
+      <!-- Hamburger (mobile only) -->
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+
+    </div>
+
+    <!-- Mobile dropdown nav -->
+    <nav class="mobile-nav" id="mobile-nav" aria-hidden="true">
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('dashboard') }}">📊 Dashboard</a>
+        <a href="{{ url_for('stress') }}">✨ Find a Buddy</a>
+        <a href="{{ url_for('messages_inbox') }}">
+          💬 Messages
+          {% if unread_count > 0 %}
+            <span class="mobile-nav-badge">{{ unread_count }}</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('logout') }}" class="btn-nav-logout">Logout</a>
+      {% else %}
+        <a href="{{ url_for('login') }}">Login</a>
+        <a href="{{ url_for('signup') }}" class="btn-nav-signup">Sign Up</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <!-- ===== FLASH MESSAGES ===== -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <p>ConnectAI &copy; 2024 &mdash; Texas Christian University &mdash; Built with <span style="color:#e63946;">&#9829;</span> for Horned Frogs</p>
+  </footer>
+
+  <!-- Hamburger toggle -->
+  <script>
+    const hamburger  = document.getElementById('hamburger');
+    const mobileNav  = document.getElementById('mobile-nav');
+
+    hamburger.addEventListener('click', () => {
+      const open = mobileNav.classList.toggle('open');
+      hamburger.classList.toggle('open', open);
+      hamburger.setAttribute('aria-expanded', open);
+      mobileNav.setAttribute('aria-hidden', !open);
+    });
+
+    // Close on any nav link click
+    mobileNav.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        mobileNav.classList.remove('open');
+        hamburger.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+        mobileNav.setAttribute('aria-hidden', 'true');
+      });
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (!hamburger.contains(e.target) && !mobileNav.contains(e.target)) {
+        mobileNav.classList.remove('open');
+        hamburger.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+        mobileNav.setAttribute('aria-hidden', 'true');
+      }
+    });
+  </script>
+
+  <!-- Notification bell JS -->
+  {% if session.get('user_id') %}
+  <script>
+    const notifBell     = document.getElementById('notif-bell');
+    const notifDropdown = document.getElementById('notif-dropdown');
+
+    if (notifBell && notifDropdown) {
+      notifBell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        notifDropdown.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!notifDropdown.contains(e.target) && !notifBell.contains(e.target)) {
+          notifDropdown.classList.remove('open');
+        }
+      });
+    }
+
+    function handleNotifClick(notifId, matchId) {
+      // Mark read then navigate
+      fetch(`/notifications/mark-read/${notifId}`, { method: 'POST' })
+        .then(() => {
+          if (matchId) {
+            window.location.href = `/messages/${matchId}`;
+          } else {
+            window.location.href = '/dashboard';
+          }
+        });
+    }
+
+    function markAllRead() {
+      fetch('/notifications/mark-all-read', { method: 'POST' })
+        .then(() => { window.location.reload(); });
+    }
+  </script>
+  {% endif %}
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

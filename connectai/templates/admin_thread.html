@@ -1,0 +1,96 @@
+{% extends "admin_base.html" %}
+{% block title %}Thread #{{ match.id }} — Admin | ConnectAI{% endblock %}
+{% block page_title %}Message Thread #{{ match.id }}{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('admin_dashboard') }}#messages"
+     style="font-size:.85rem;color:#6b7280;text-decoration:none;">← Back to Messages</a>
+</div>
+
+<!-- Participants info -->
+<div class="admin-section" style="margin-bottom:20px;">
+  <div class="admin-section-header">
+    <h2>Conversation Participants</h2>
+    <span class="admin-badge admin-badge-{{ 'ok' if match.status == 'accepted' else 'warn' }}">
+      {{ match.status | title }}
+    </span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+    {% for role, person in [('Seeker 🔍', seeker), ('Helper 🤝', helper)] %}
+    <div style="padding:16px 20px;{% if not loop.last %}border-right:1px solid #f0eff5;{% endif %}">
+      <p style="font-size:.72rem;font-weight:700;color:#A855F7;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">{{ role }}</p>
+      {% if person %}
+      <p style="font-weight:700;color:#4D1979;">{{ person.name }}</p>
+      <p style="font-size:.82rem;color:#6b7280;">{{ person.email }}</p>
+      <a href="{{ url_for('admin_view_user', user_id=person.id) }}"
+         class="admin-btn admin-btn-view" style="margin-top:8px;">👁️ View Profile</a>
+      {% else %}
+      <p style="color:#6b7280;">Unknown</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Stress description -->
+{% if match.stress_description %}
+<div class="admin-section" style="margin-bottom:20px;">
+  <div class="admin-section-header"><h2>Original Request</h2></div>
+  <div style="padding:16px 20px;font-size:.88rem;line-height:1.7;color:#1a1a2e;">
+    {{ match.stress_description }}
+  </div>
+</div>
+{% endif %}
+
+<!-- Messages -->
+<div class="admin-section">
+  <div class="admin-section-header">
+    <h2>💬 Messages <span style="font-weight:400;color:#6b7280;font-size:.85rem;">({{ msgs|length }} total)</span></h2>
+  </div>
+
+  {% if msgs %}
+  <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">
+    {% for msg in msgs %}
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px;border-radius:10px;background:#f8f5ff;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="font-weight:700;font-size:.85rem;color:#4D1979;">
+            {{ msg.sender_first or msg.sender_name }}
+          </span>
+          <span style="font-size:.72rem;color:#9ca3af;">
+            {{ msg.timestamp[:16].replace('T',' ') if msg.timestamp else '' }}
+          </span>
+          {% if msg.is_read %}
+            <span class="admin-badge admin-badge-muted" style="font-size:.65rem;">read</span>
+          {% else %}
+            <span class="admin-badge admin-badge-warn" style="font-size:.65rem;">unread</span>
+          {% endif %}
+        </div>
+        <p style="font-size:.9rem;line-height:1.5;color:#1a1a2e;">{{ msg.content }}</p>
+      </div>
+      <form method="POST" action="{{ url_for('admin_delete_message', message_id=msg.id) }}"
+            onsubmit="return confirm('Delete this message?')">
+        <input type="hidden" name="match_id" value="{{ match.id }}" />
+        <button type="submit" class="admin-btn admin-btn-danger" title="Delete message">🗑️</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="padding:24px;text-align:center;color:#6b7280;">No messages in this thread yet.</div>
+  {% endif %}
+
+  <!-- Delete entire thread -->
+  <div style="padding:16px 20px;border-top:1px solid #f0eff5;display:flex;justify-content:flex-end;">
+    <form method="POST" action="{{ url_for('admin_delete_match', match_id=match.id) }}"
+          onsubmit="return confirm('Delete the ENTIRE thread including all messages?')">
+      <button type="submit" class="admin-btn admin-btn-danger" style="padding:8px 16px;">
+        🗑️ Delete Entire Thread
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

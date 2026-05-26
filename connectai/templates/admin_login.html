@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — ConnectAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body class="admin-body">
+
+<div class="admin-login-wrap">
+  <div class="admin-login-card">
+    <h1>🛡️ Admin Login</h1>
+    <p>ConnectAI Management Panel · TCU</p>
+
+    {% if error %}
+      <div class="admin-flash admin-flash-danger" style="margin-bottom:16px;">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <label style="font-size:.82rem;font-weight:600;color:#4D1979;display:block;margin-bottom:6px;">
+        Username
+      </label>
+      <input class="admin-input" type="text" name="username"
+             placeholder="connectai_admin" autocomplete="username" required autofocus />
+
+      <label style="font-size:.82rem;font-weight:600;color:#4D1979;display:block;margin-bottom:6px;">
+        Password
+      </label>
+      <input class="admin-input" type="password" name="password"
+             placeholder="••••••••••••" autocomplete="current-password" required />
+
+      <button type="submit" class="admin-submit">Sign In to Admin Panel</button>
+    </form>
+
+    <p style="text-align:center;margin-top:16px;font-size:.8rem;color:#9ca3af;">
+      <a href="{{ url_for('login') }}" style="color:#6b7280;">← Back to main site</a>
+    </p>
+  </div>
+</div>
+
+</body>
+</html>

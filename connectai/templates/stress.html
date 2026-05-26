@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Find a Buddy — ConnectAI | TCU{% endblock %}
+
+{% block content %}
+
+<!-- Loading overlay (shown while server is processing) -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-message" id="loading-msg">🧠 Analyzing your profile...</div>
+  <div class="loading-sub">This usually takes 2–4 seconds</div>
+</div>
+
+<div class="stress-wrapper">
+
+  <div class="stress-header">
+    <h1>Find your person</h1>
+    <p>Be honest. The more you share, the better your match.</p>
+  </div>
+
+  <!-- ── Already in an active match ── -->
+  {% if active %}
+  <div class="card" style="border-left:4px solid var(--warning);padding:28px 32px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+      <span style="font-size:1.8rem;">⏳</span>
+      <div>
+        <p style="font-weight:700;font-size:1.05rem;color:var(--primary);">You have an active match</p>
+        <p style="color:var(--muted);font-size:.88rem;">You're currently connected with someone. Check your dashboard.</p>
+      </div>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+  </div>
+
+  <!-- ── Match result (rich display) ── -->
+  {% elif match_result %}
+  <div class="card" style="padding:28px 32px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+      <span style="font-size:1.4rem;">✨</span>
+      <p style="font-weight:800;font-size:1.15rem;color:var(--primary);">We found your buddy!</p>
+    </div>
+
+    <div class="match-result-card">
+
+      <!-- Top row: score circle + name/meta -->
+      <div class="match-result-top">
+
+        <!-- Compatibility score circle -->
+        <div class="score-circle-wrap">
+          <div class="score-circle" style="--pct:{{ match_result.compatibility_score }};">
+            <span class="score-value">{{ match_result.compatibility_score }}%</span>
+          </div>
+          <span class="score-label">Compatibility</span>
+        </div>
+
+        <!-- Helper info -->
+        <div class="match-info">
+          <!-- Avatar -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            {% if match_result.photo %}
+              <img src="{{ url_for('static', filename='uploads/' ~ match_result.photo) }}"
+                   alt="{{ match_result.name }}" class="match-avatar" />
+            {% else %}
+              <div class="match-avatar-placeholder">🎓</div>
+            {% endif %}
+            <div>
+              <p class="match-name">{{ match_result.first }}</p>
+              <p class="match-meta">Class of {{ match_result.graduation }}</p>
+            </div>
+          </div>
+
+          <!-- Help type badge -->
+          <div class="match-help-type-badge">
+            {{ match_result.help_type_icon }} {{ match_result.estimated_help_type }} Support
+          </div>
+        </div>
+      </div>
+
+      <!-- Status tracker: Matched → Notified → Accepted → Connected -->
+      <div class="status-tracker">
+        <div class="status-step done">
+          <div class="status-step-label">✓ Matched</div>
+        </div>
+        <div class="status-step-line done"></div>
+        <div class="status-step active">
+          <div class="status-step-label">🔔 Notified</div>
+        </div>
+        <div class="status-step-line"></div>
+        <div class="status-step">
+          <div class="status-step-label">Accepted</div>
+        </div>
+        <div class="status-step-line"></div>
+        <div class="status-step">
+          <div class="status-step-label">Connected</div>
+        </div>
+      </div>
+
+      <!-- Match reason -->
+      <div class="match-reason-box">
+        {{ match_result.explanation }}
+      </div>
+
+      <!-- Conversation starter -->
+      {% if match_result.conversation_starter %}
+      <p style="font-size:.75rem;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">
+        💡 Suggested first message:
+      </p>
+      <div class="convo-starter-box">
+        "{{ match_result.conversation_starter }}"
+      </div>
+      {% endif %}
+
+      <!-- CTA buttons -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="{{ url_for('dashboard') }}"
+           class="btn"
+           style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);">
+          View Dashboard
+        </a>
+        <a href="{{ url_for('messages_inbox') }}"
+           class="btn"
+           style="background:#fff;color:var(--primary);font-weight:800;">
+          💬 Send First Message
+        </a>
+      </div>
+
+      {% if match_result.method == 'local' %}
+      <p style="font-size:.72rem;opacity:.5;margin-top:12px;">Matched using local algorithm</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Find a buddy form ── -->
+  {% else %}
+  <div class="card">
+    <form method="POST" id="stress-form">
+      <div class="form-group">
+        <label for="stress_text">What's weighing on you right now?</label>
+        <textarea id="stress_text" name="stress_text" rows="4"
+                  placeholder="e.g. Midterms are overwhelming me, I'm struggling with time management, I feel isolated in a new city...">{{ request.form.get('stress_text', '') }}</textarea>
+        <p class="input-hint">Be as specific as you'd like — the AI uses this to find someone who truly gets it.</p>
+      </div>
+
+      <div class="form-group" style="margin-top:8px;">
+        <label for="help_text">What can you offer in return?</label>
+        <textarea id="help_text" name="help_text" rows="3"
+                  placeholder="e.g. I'm great at proofreading, I know my way around campus, I'm a good listener...">{{ request.form.get('help_text', '') }}</textarea>
+        <p class="input-hint">Even a little goes a long way — this also helps the AI find you a better match.</p>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:8px;" id="find-btn">
+        Find My Match ✨
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+{% if not match_result and not active %}
+<script>
+  const LOADING_MESSAGES = [
+    "🧠 Analyzing your profile...",
+    "🔍 Searching for your best match...",
+    "⚡ Calculating compatibility...",
+    "🎯 Found someone great for you!",
+  ];
+
+  const overlay    = document.getElementById('loading-overlay');
+  const msgEl      = document.getElementById('loading-msg');
+  const stressForm = document.getElementById('stress-form');
+
+  stressForm.addEventListener('submit', (e) => {
+    const stress = document.getElementById('stress_text').value.trim();
+    const help   = document.getElementById('help_text').value.trim();
+    if (!stress && !help) return; // let browser validation handle it
+
+    // Show overlay and cycle messages
+    overlay.classList.add('active');
+    let idx = 0;
+    msgEl.textContent = LOADING_MESSAGES[0];
+
+    const interval = setInterval(() => {
+      idx++;
+      if (idx < LOADING_MESSAGES.length) {
+        msgEl.style.animation = 'none';
+        requestAnimationFrame(() => {
+          msgEl.style.animation = '';
+          msgEl.textContent = LOADING_MESSAGES[idx];
+        });
+      } else {
+        clearInterval(interval);
+      }
+    }, 1200);
+  });
+</script>
+{% endif %}
+{% endblock %}

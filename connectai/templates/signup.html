@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — ConnectAI | TCU{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+
+  <!-- Hero panel -->
+  <div class="auth-hero">
+    <p class="hero-eyebrow">Join ConnectAI</p>
+    <h1 class="hero-headline">Find your person.<br>Make a real connection.</h1>
+    <p class="hero-sub">Tell us who you are, what you're going through, and what you can offer — we'll do the rest. Your perfect study buddy or support system is already here.</p>
+    <div class="hero-pills">
+      <span class="hero-pill">@tcu.edu only</span>
+      <span class="hero-pill">Free forever</span>
+      <span class="hero-pill">Takes 3 minutes</span>
+    </div>
+  </div>
+
+  <!-- Form panel -->
+  <div class="auth-form-panel">
+    <h2 class="auth-title">Create your account</h2>
+    <p class="auth-sub">Start building your peer support network</p>
+
+    <form method="POST" enctype="multipart/form-data">
+
+      <!-- Profile photo -->
+      <div class="form-group">
+        <label>Profile Photo <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <label class="photo-upload-label" for="profile_photo">
+          <span class="photo-upload-icon">📷</span>
+          <span id="photo-filename">Click to upload a photo</span>
+        </label>
+        <input type="file" id="profile_photo" name="profile_photo" accept="image/*"
+               onchange="document.getElementById('photo-filename').textContent = this.files[0]?.name || 'Click to upload a photo'" />
+      </div>
+
+      <!-- Name row -->
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label for="first_name">First Name</label>
+          <input type="text" id="first_name" name="first_name"
+                 value="{{ form.get('first_name','') }}" placeholder="Jane" required />
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label for="last_name">Last Name</label>
+          <input type="text" id="last_name" name="last_name"
+                 value="{{ form.get('last_name','') }}" placeholder="Doe" required />
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:18px;">
+        <label for="email">TCU Email</label>
+        <input type="email" id="email" name="email"
+               value="{{ form.get('email','') }}" placeholder="yourname@tcu.edu" required autocomplete="email" />
+        <p class="input-hint">Must be a valid @tcu.edu address</p>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Minimum 8 characters" required />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label for="phone">Phone <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+          <input type="tel" id="phone" name="phone" value="{{ form.get('phone','') }}" placeholder="817-555-0100" />
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label for="dob">Date of Birth <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+          <input type="date" id="dob" name="dob" value="{{ form.get('dob','') }}" />
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:18px;">
+        <div class="form-group" style="margin-bottom:0">
+          <label for="graduation">Graduation Year</label>
+          <select id="graduation" name="graduation" required>
+            <option value="">Select year</option>
+            {% for yr in ['2025','2026','2027','2028','2029'] %}
+              <option value="{{ yr }}" {{ 'selected' if form.get('graduation')==yr }}>{{ yr }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label for="gender">Gender</label>
+          <select id="gender" name="gender" required>
+            <option value="">Select</option>
+            <option value="Male"   {{ 'selected' if form.get('gender')=='Male' }}>Male</option>
+            <option value="Female" {{ 'selected' if form.get('gender')=='Female' }}>Female</option>
+            <option value="Non-binary" {{ 'selected' if form.get('gender')=='Non-binary' }}>Non-binary</option>
+            <option value="Prefer not to say" {{ 'selected' if form.get('gender')=='Prefer not to say' }}>Prefer not to say</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:24px;">
+        Create Account &amp; Take Survey
+      </button>
+    </form>
+
+    <p class="auth-footer-link">
+      Already have an account? <a href="{{ url_for('login') }}" style="font-weight:700;">Sign in</a>
+    </p>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Messages — ConnectAI | TCU{% endblock %}
+
+{% block content %}
+<div class="messages-layout">
+
+  <!-- ── Sidebar: thread list ── -->
+  <div class="messages-sidebar">
+    <div class="sidebar-header">💬 Messages</div>
+
+    {% if threads %}
+      {% for t in threads %}
+        {% if session.get('user_id') == t.seeker_id %}
+          {% set other_name  = t.helper_first  or t.helper_name.split()[0]  %}
+          {% set other_photo = t.helper_photo %}
+        {% else %}
+          {% set other_name  = t.seeker_first  or t.seeker_name.split()[0]  %}
+          {% set other_photo = t.seeker_photo %}
+        {% endif %}
+
+        <a href="{{ url_for('message_thread', match_id=t.id) }}"
+           class="thread-item {% if match_id and match_id == t.id %}active{% endif %}">
+
+          {% if other_photo %}
+            <img src="{{ url_for('static', filename='uploads/' ~ other_photo) }}"
+                 alt="{{ other_name }}" class="thread-avatar" />
+          {% else %}
+            <div class="thread-avatar-ph">{{ other_name[0] | upper }}</div>
+          {% endif %}
+
+          <div class="thread-info">
+            <div class="thread-name">{{ other_name }}</div>
+            <div class="thread-preview">
+              {% if msgs and match_id == t.id and msgs %}
+                {{ msgs[-1]['content'][:40] }}{% if msgs[-1]['content']|length > 40 %}…{% endif %}
+              {% else %}
+                Tap to start chatting
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="thread-meta">
+            {% if t.unread and t.unread > 0 %}
+              <span class="thread-unread-badge">{{ t.unread }}</span>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+
+    {% else %}
+      <div style="padding:32px 16px;text-align:center;color:var(--muted);">
+        <div style="font-size:2rem;margin-bottom:8px;">💬</div>
+        <p style="font-size:.85rem;line-height:1.6;">No messages yet. Once you match with someone, your conversation will appear here.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Main: thread or empty state ── -->
+  <div class="messages-main">
+
+    {% if thread and other %}
+      <!-- Active thread header -->
+      <div class="messages-main-header">
+        {% if other.profile_photo %}
+          <img src="{{ url_for('static', filename='uploads/' ~ other.profile_photo) }}"
+               alt="{{ other.first_name }}" class="thread-avatar" style="width:40px;height:40px;" />
+        {% else %}
+          <div class="thread-avatar-ph" style="width:40px;height:40px;font-size:1rem;">
+            {{ (other.first_name or other.name)[0] | upper }}
+          </div>
+        {% endif %}
+        <div>
+          <div class="messages-main-name">{{ other.first_name or other.name.split()[0] }}</div>
+          <div class="messages-main-meta">{{ other.email }}</div>
+        </div>
+      </div>
+
+      <!-- Chat body -->
+      <div class="messages-body" id="chat-body">
+        {% if msgs %}
+          {% for msg in msgs %}
+            {% set is_mine = msg.sender_id == session.get('user_id') %}
+            <div class="msg-bubble-wrap {% if is_mine %}mine{% else %}theirs{% endif %}"
+                 data-id="{{ msg.id }}">
+              <div class="msg-bubble">{{ msg.content }}</div>
+              <span class="msg-time">
+                {% if not is_mine %}{{ msg.sender_first or msg.sender_name.split()[0] }} · {% endif %}
+                {{ msg.timestamp[:16].replace('T', ' ') if 'T' in msg.timestamp else msg.timestamp[:16] }}
+              </span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="messages-no-thread" id="empty-thread">
+            <div class="messages-no-thread-icon">👋</div>
+            <p>Say hello to {{ other.first_name or other.name.split()[0] }}! This is the start of your conversation.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Compose box -->
+      <div class="messages-compose">
+        <textarea id="msg-input" rows="1" placeholder="Type a message…"
+                  aria-label="Message input"></textarea>
+        <button class="btn btn-primary btn-icon" id="send-btn" title="Send" aria-label="Send message">
+          ➤
+        </button>
+      </div>
+
+    {% else %}
+      <!-- No thread selected -->
+      <div class="messages-no-thread">
+        <div class="messages-no-thread-icon">💬</div>
+        <p>No messages yet. Once you match with someone, your conversation will appear here.</p>
+        {% if not threads %}
+          <a href="{{ url_for('stress') }}" class="btn btn-primary" style="margin-top:8px;">Find a Buddy</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+  </div><!-- /.messages-main -->
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+{% if thread and other %}
+<script>
+  const MATCH_ID  = {{ match_id }};
+  const MY_ID     = {{ session.get('user_id') }};
+  const OTHER     = {{ other.first_name | tojson }};
+  const SEND_URL  = "{{ url_for('message_send', match_id=match_id) }}";
+  const FETCH_URL = "{{ url_for('message_fetch', match_id=match_id) }}";
+
+  const chatBody  = document.getElementById('chat-body');
+  const msgInput  = document.getElementById('msg-input');
+  const sendBtn   = document.getElementById('send-btn');
+
+  // Track the highest message id we've seen so we only poll for new ones
+  let lastId = 0;
+  document.querySelectorAll('.msg-bubble-wrap[data-id]').forEach(el => {
+    const id = parseInt(el.dataset.id, 10);
+    if (id > lastId) lastId = id;
+  });
+
+  /* ── Scroll helpers ── */
+  function scrollToBottom(smooth = true) {
+    chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
+  }
+  scrollToBottom(false); // on load, jump instantly
+
+  /* ── Build a bubble DOM element ── */
+  function buildBubble(msg) {
+    const wrap = document.createElement('div');
+    wrap.className = `msg-bubble-wrap ${msg.mine ? 'mine' : 'theirs'}`;
+    wrap.dataset.id = msg.id;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = msg.content;
+
+    const time = document.createElement('span');
+    time.className = 'msg-time';
+    const ts = msg.timestamp ? msg.timestamp.substring(0, 16).replace('T', ' ') : '';
+    time.textContent = msg.mine ? ts : `${msg.sender_first} · ${ts}`;
+
+    wrap.appendChild(bubble);
+    wrap.appendChild(time);
+    return wrap;
+  }
+
+  /* ── Remove empty-thread placeholder if present ── */
+  function clearEmpty() {
+    const empty = document.getElementById('empty-thread');
+    if (empty) empty.remove();
+  }
+
+  /* ── Send message ── */
+  async function sendMessage() {
+    const content = msgInput.value.trim();
+    if (!content) return;
+
+    msgInput.value = '';
+    msgInput.style.height = '';
+    sendBtn.disabled = true;
+
+    try {
+      const res  = await fetch(SEND_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ content }),
+      });
+      const data = await res.json();
+
+      if (data.ok && data.message) {
+        clearEmpty();
+        const bubble = buildBubble(data.message);
+        chatBody.appendChild(bubble);
+        if (data.message.id > lastId) lastId = data.message.id;
+        scrollToBottom();
+      }
+    } catch (e) {
+      console.error('Send failed', e);
+    } finally {
+      sendBtn.disabled = false;
+      msgInput.focus();
+    }
+  }
+
+  /* ── Poll for new messages ── */
+  async function pollMessages() {
+    try {
+      const res  = await fetch(`${FETCH_URL}?after=${lastId}`);
+      const data = await res.json();
+
+      if (data.ok && data.messages.length > 0) {
+        clearEmpty();
+        let appended = false;
+        data.messages.forEach(msg => {
+          // Don't re-add messages already in the DOM
+          if (!document.querySelector(`.msg-bubble-wrap[data-id="${msg.id}"]`)) {
+            chatBody.appendChild(buildBubble(msg));
+            appended = true;
+          }
+          if (msg.id > lastId) lastId = msg.id;
+        });
+        if (appended) scrollToBottom();
+      }
+    } catch (e) {
+      // Network blip — silently retry next interval
+    }
+  }
+
+  /* ── Event listeners ── */
+  sendBtn.addEventListener('click', sendMessage);
+
+  msgInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Auto-grow textarea
+  msgInput.addEventListener('input', () => {
+    msgInput.style.height = 'auto';
+    msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
+  });
+
+  // Poll every 3 seconds for incoming messages
+  setInterval(pollMessages, 3000);
+</script>
+{% endif %}
+{% endblock %}

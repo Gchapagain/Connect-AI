@@ -1,0 +1,311 @@
+{% extends "admin_base.html" %}
+{% block title %}Dashboard — Admin | ConnectAI{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── Temp password alert ── -->
+{% if temp_pw %}
+<div class="admin-section" style="border:2px solid #F59E0B;margin-bottom:24px;">
+  <div class="admin-section-header" style="background:#fffbeb;">
+    <h2 style="color:#92400e;">🔑 Temporary Password Generated</h2>
+  </div>
+  <div style="padding:16px 20px;">
+    <p style="font-size:.88rem;color:#6b7280;margin-bottom:8px;">
+      Temporary password for <strong>{{ temp_pw_user }}</strong>. Share it securely — it cannot be recovered.
+    </p>
+    <div class="temp-pw-box">{{ temp_pw }}</div>
+    <p style="font-size:.78rem;color:#9ca3af;">The user should change this immediately after logging in.</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════
+     STATS
+═══════════════════════════════════════════════ -->
+<div id="stats">
+  <h2 style="font-size:1rem;font-weight:700;color:#4D1979;margin-bottom:14px;">📊 Overview</h2>
+  <div class="admin-stats-grid">
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon">👥</div>
+      <div class="admin-stat-value">{{ stats.total_users }}</div>
+      <div class="admin-stat-label">Total Users</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon">📝</div>
+      <div class="admin-stat-value">{{ stats.total_surveys }}</div>
+      <div class="admin-stat-label">Surveys Done</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon">🤝</div>
+      <div class="admin-stat-value">{{ stats.total_matches }}</div>
+      <div class="admin-stat-label">Total Matches</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon">💬</div>
+      <div class="admin-stat-value">{{ stats.total_messages }}</div>
+      <div class="admin-stat-label">Messages Sent</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon">🆕</div>
+      <div class="admin-stat-value">{{ stats.new_this_week }}</div>
+      <div class="admin-stat-label">New This Week</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-icon">🚫</div>
+      <div class="admin-stat-value">{{ stats.banned_users }}</div>
+      <div class="admin-stat-label">Banned Users</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     USERS
+═══════════════════════════════════════════════ -->
+<div class="admin-section" id="users">
+  <div class="admin-section-header">
+    <h2>👥 User Management</h2>
+    <input class="admin-search" type="search" id="user-search"
+           placeholder="Search name or email…" oninput="filterTable('user-table', this.value)" />
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table" id="user-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Grad</th>
+          <th>Gender</th>
+          <th>Joined</th>
+          <th>Survey</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td style="font-weight:600;">{{ u.name }}</td>
+          <td style="color:#6b7280;font-size:.82rem;">{{ u.email }}</td>
+          <td>{{ u.graduation or '—' }}</td>
+          <td>{{ u.gender or '—' }}</td>
+          <td style="font-size:.78rem;color:#6b7280;">
+            {{ u.created_at[:10] if u.created_at else '—' }}
+          </td>
+          <td>
+            {% if u.answer_count >= 20 %}
+              <span class="admin-badge admin-badge-ok">Yes</span>
+            {% else %}
+              <span class="admin-badge admin-badge-muted">No</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_banned %}
+              <span class="admin-badge admin-badge-danger">Banned</span>
+            {% else %}
+              <span class="admin-badge admin-badge-ok">Active</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="admin-btn-group">
+              <a href="{{ url_for('admin_view_user', user_id=u.id) }}"
+                 class="admin-btn admin-btn-view">👁️ View</a>
+
+              {% if u.is_banned %}
+              <form method="POST" action="{{ url_for('admin_unban_user', user_id=u.id) }}" style="display:inline;">
+                <button type="submit" class="admin-btn admin-btn-unban">✅ Unban</button>
+              </form>
+              {% else %}
+              <form method="POST" action="{{ url_for('admin_ban_user', user_id=u.id) }}" style="display:inline;"
+                    onsubmit="return confirm('Ban {{ u.name }}?')">
+                <button type="submit" class="admin-btn admin-btn-ban">🚫 Ban</button>
+              </form>
+              {% endif %}
+
+              <form method="POST" action="{{ url_for('admin_reset_password', user_id=u.id) }}" style="display:inline;"
+                    onsubmit="return confirm('Reset password for {{ u.name }}?')">
+                <button type="submit" class="admin-btn admin-btn-reset">🔑 Reset PW</button>
+              </form>
+
+              <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}" style="display:inline;"
+                    onsubmit="return confirm('PERMANENTLY delete {{ u.name }} and all their data?')">
+                <button type="submit" class="admin-btn admin-btn-danger">🗑️ Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="text-align:center;color:#6b7280;padding:24px;">No users yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MATCHES
+═══════════════════════════════════════════════ -->
+<div class="admin-section" id="matches">
+  <div class="admin-section-header">
+    <h2>🤝 Match Management</h2>
+    <input class="admin-search" type="search" id="match-search"
+           placeholder="Search name…" oninput="filterTable('match-table', this.value)" />
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table" id="match-table">
+      <thead>
+        <tr>
+          <th>Seeker</th>
+          <th>Helper</th>
+          <th>Status</th>
+          <th>Messages</th>
+          <th>Date</th>
+          <th>Stress (preview)</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in matches %}
+        <tr>
+          <td style="font-weight:600;">{{ m.seeker_first or m.seeker_name or '—' }}</td>
+          <td style="font-weight:600;">{{ m.helper_first or m.helper_name or '—' }}</td>
+          <td>
+            {% if m.status == 'accepted' %}
+              <span class="admin-badge admin-badge-ok">Accepted</span>
+            {% elif m.status == 'pending' %}
+              <span class="admin-badge admin-badge-warn">Pending</span>
+            {% elif m.status == 'rejected' %}
+              <span class="admin-badge admin-badge-danger">Rejected</span>
+            {% elif m.status == 'cancelled' %}
+              <span class="admin-badge admin-badge-muted">Cancelled</span>
+            {% else %}
+              <span class="admin-badge admin-badge-muted">{{ m.status }}</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">{{ m.msg_count }}</td>
+          <td style="font-size:.78rem;color:#6b7280;">{{ m.timestamp[:10] if m.timestamp else '—' }}</td>
+          <td>
+            <span class="truncate" style="display:block;max-width:180px;"
+                  title="{{ m.stress_description }}">
+              {{ m.stress_description[:60] }}{% if m.stress_description|length > 60 %}…{% endif %}
+            </span>
+          </td>
+          <td>
+            <div class="admin-btn-group">
+              {% if m.status == 'accepted' %}
+              <a href="{{ url_for('admin_view_thread', match_id=m.id) }}"
+                 class="admin-btn admin-btn-view">💬 Thread</a>
+              {% endif %}
+              {% if m.status not in ['cancelled', 'rejected'] %}
+              <form method="POST" action="{{ url_for('admin_cancel_match', match_id=m.id) }}" style="display:inline;"
+                    onsubmit="return confirm('Cancel this match?')">
+                <button type="submit" class="admin-btn admin-btn-ban">⏹ Cancel</button>
+              </form>
+              {% endif %}
+              <form method="POST" action="{{ url_for('admin_delete_match', match_id=m.id) }}" style="display:inline;"
+                    onsubmit="return confirm('Delete match and ALL messages?')">
+                <button type="submit" class="admin-btn admin-btn-danger">🗑️ Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;color:#6b7280;padding:24px;">No matches yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MESSAGES / CONVERSATIONS
+═══════════════════════════════════════════════ -->
+<div class="admin-section" id="messages">
+  <div class="admin-section-header">
+    <h2>💬 Message Moderation</h2>
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Seeker</th>
+          <th>Helper</th>
+          <th>Messages</th>
+          <th>Last Message Preview</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in convos %}
+        <tr>
+          <td style="font-weight:600;">{{ c.seeker_first or c.seeker_name or '—' }}</td>
+          <td style="font-weight:600;">{{ c.helper_first or c.helper_name or '—' }}</td>
+          <td style="text-align:center;">
+            <span class="admin-badge admin-badge-purple">{{ c.msg_count }}</span>
+          </td>
+          <td>
+            <span class="truncate" style="display:block;max-width:200px;"
+                  title="{{ c.last_msg or '' }}">
+              {{ (c.last_msg or 'No messages')[:60] }}
+            </span>
+          </td>
+          <td>
+            <a href="{{ url_for('admin_view_thread', match_id=c.id) }}"
+               class="admin-btn admin-btn-view">👁️ View Thread</a>
+            <form method="POST" action="{{ url_for('admin_delete_match', match_id=c.id) }}"
+                  style="display:inline;" onsubmit="return confirm('Delete entire conversation?')">
+              <button type="submit" class="admin-btn admin-btn-danger">🗑️ Delete All</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:#6b7280;padding:24px;">No active conversations.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     AUDIT LOG
+═══════════════════════════════════════════════ -->
+<div class="admin-section" id="logs">
+  <div class="admin-section-header">
+    <h2>📋 Audit Log <span style="font-weight:400;color:#6b7280;font-size:.85rem;">(last 50 actions)</span></h2>
+  </div>
+  {% if logs %}
+    {% for log in logs %}
+    <div class="admin-log-item">
+      <span class="admin-log-time">{{ log.timestamp[:16].replace('T',' ') if log.timestamp else '' }}</span>
+      <div>
+        <div class="admin-log-action">{{ log.action | replace('_', ' ') | title }}</div>
+        {% if log.note %}
+          <div class="admin-log-note">{{ log.note }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div style="padding:24px;text-align:center;color:#6b7280;font-size:.88rem;">No actions logged yet.</div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filterTable(tableId, query) {
+    const q    = query.toLowerCase();
+    const rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  // Auto-scroll to hash anchor on load
+  if (window.location.hash) {
+    const el = document.querySelector(window.location.hash);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }
+</script>
+{% endblock %}
